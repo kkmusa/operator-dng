@@ -1,4 +1,4 @@
-const APP_VERSION='2.8.1-web.7';
+const APP_VERSION='2.9.0-web.8';
 const app=document.getElementById('app');
 const state={route:'splash',navStack:[],historyDraftId:null,historyDraftRoute:null,_last:null};
 const num=v=>{const x=parseFloat(String(v??'').replace(',','.'));return Number.isFinite(x)?x:null};
@@ -22,16 +22,34 @@ function clearHistory(){localStorage.removeItem(historyKey);resetHistoryDraft()}
 function go(route){
   if(route===state.route)return;
   if(state.route)state.navStack.push(state.route);
+  if(!isRegulationRoute(route))resetRegulationOrientation();
   resetHistoryDraft();
   state.route=route;render();scrollTo(0,0)
 }
 function goBack(){
   if(state.route==='assistant' && state.assistantIndex!==undefined && state.assistantIndex!==null){state.assistantIndex=null;renderAssistant();scrollTo(0,0);return}
   const prev=state.navStack.pop();
-  if(prev){resetHistoryDraft();state.route=prev;render();scrollTo(0,0);return}
-  if(state.route!=='home'){resetHistoryDraft();state.route='home';render();scrollTo(0,0)}
+  if(prev){if(!isRegulationRoute(prev))resetRegulationOrientation();resetHistoryDraft();state.route=prev;render();scrollTo(0,0);return}
+  if(state.route!=='home'){resetRegulationOrientation();resetHistoryDraft();state.route='home';render();scrollTo(0,0)}
 }
 function topbar(title){return `<div class="topbar"><button class="back" onclick="goBack()">‹</button><h1>${esc(title)}</h1></div>`}
+function regulationTopbar(title){return `<div class="topbar"><button class="back" onclick="goBack()">‹</button><h1>${esc(title)}</h1><button class="rotate-btn" type="button" onclick="toggleRegulationOrientation()" aria-label="Перевернуть экран" title="Перевернуть экран">↻</button></div>`}
+const regulationRoutes=new Set(['reference','refinfo','ped','assistant','pipes','skoref']);
+function isRegulationRoute(route){return regulationRoutes.has(route)}
+async function toggleRegulationOrientation(){
+  if(!isRegulationRoute(state.route))return;
+  if(state.manualLandscape){resetRegulationOrientation();return}
+  state.manualLandscape=true;
+  try{
+    if(screen.orientation?.lock){await screen.orientation.lock('landscape');state.nativeOrientationLock=true;return}
+  }catch{}
+  document.documentElement.classList.add('manual-landscape')
+}
+function resetRegulationOrientation(){
+  state.manualLandscape=false;
+  document.documentElement.classList.remove('manual-landscape');
+  if(state.nativeOrientationLock){try{screen.orientation?.unlock()}catch{}state.nativeOrientationLock=false}
+}
 function bottomNav(active='home'){const canBack=state.route!=='home'||state.navStack.length>0;return `<nav class="bottom-nav"><button class="nav-btn back-nav" onclick="goBack()" ${canBack?'':'disabled'}><span>‹</span><span>Назад</span></button><button class="nav-btn ${active==='home'?'active':''}" onclick="go('home')"><span>⌂</span><span>Главная</span></button><button class="nav-btn ${active==='history'?'active':''}" onclick="go('history')"><span>◷</span><span>История</span></button><button class="nav-btn ${active==='reference'?'active':''}" onclick="go('reference')"><span>☰</span><span>Справочник</span></button></nav>`}
 function screen(body,active='home'){return `<div class="screen">${body}</div>${bottomNav(active)}`}
 function field(id,label,opts=''){return `<div class="field"><label for="${id}">${label}</label><input id="${id}" inputmode="decimal" autocomplete="off" ${opts}></div>`}
@@ -43,6 +61,7 @@ function iconSvg(type){
   const common='class="menu-svg" viewBox="0 0 48 48" aria-hidden="true"';
   if(type==='level')return `<svg ${common}><path d="M10 30c6-7 22-7 28 0v8H10z" fill="#39a9db"/><path d="M10 30c7 4 21 4 28 0" fill="none" stroke="#fff" stroke-width="2.5"/><text x="24" y="23" text-anchor="middle" font-size="20" font-weight="900" fill="#171717">H</text></svg>`;
   if(type==='frequency')return `<svg ${common}><rect x="7" y="7" width="34" height="34" rx="11" fill="#fff3cd" stroke="#f28c00" stroke-width="2"/><text x="24" y="31" text-anchor="middle" font-size="27" font-weight="900" font-style="italic" fill="#171717">F</text></svg>`;
+  if(type==='foreign')return `<svg ${common}><circle cx="24" cy="24" r="18" fill="#fff3cd" stroke="#f28c00" stroke-width="2"/><path d="M6 24h36M24 6c6 6 8 12 8 18s-2 12-8 18c-6-6-8-12-8-18s2-12 8-18z" fill="none" stroke="#171717" stroke-width="2"/></svg>`;
   if(type==='manual')return `<img class="menu-img" src="assets/ic_manual_debit.png" alt="">`;
   if(type==='flow')return `<img class="menu-img" src="assets/ic_well_inflow.png" alt="">`;
   if(type==='sko')return `<svg ${common}><path d="M17 7h14v4l-4 6v5l9 15c1 2-.4 4-2.8 4H14.8c-2.4 0-3.8-2-2.8-4l9-15v-5l-4-6z" fill="#fff" stroke="#171717" stroke-width="2.4"/><path d="M15 34h18l3 5H12z" fill="#38a95a"/><path d="M18 31c4-2 8 2 13 0" fill="none" stroke="#38a95a" stroke-width="4"/></svg>`;
@@ -56,6 +75,7 @@ function menuCard(icon,title,subtitle,route){return `<div class="card menu-card 
 function renderHome(){app.innerHTML=screen(`<section class="hero"><img src="assets/logo.png" alt="Оператор ДНГ"><h1>Расчёт параметров скважины</h1><p>Выберите необходимый расчёт</p></section><main class="content stack">
 ${menuCard('level','Уровень жидкости в скважине','Определение уровня по замерам','level')}
 ${menuCard('frequency','Необходимая частота запуска','Расчёт частоты УЭЦН','frequency')}
+${menuCard('foreign','Иностранные УЭЦН','Пересчёт производительности по частоте','foreignPump')}
 ${menuCard('flow','Определение притока','Три режима ОК, Vкп по таблице или геометрии','flow')}
 ${menuCard('manual','Ручной замер дебита','Перевод литров и времени замера в м³/сут','manual')}
 ${menuCard('⚡','Расчёт отпайки ТМПН','Для СУ без ЧРП и для СУ с ЧРП','tap')}
@@ -64,9 +84,12 @@ ${menuCard('↻','Перевод УПР в АПВ','Проверка цикла 
 ${menuCard('sko','Объём СКО','Четыре варианта расчёта кислотной обработки','sko')}
 </main>`,'home')}
 
-function renderLevel(){app.innerHTML=screen(`${topbar('Расчёт уровня жидкости')}<main class="content stack">${field('depth','Глубина спуска насоса, м')}<div class="row">${field('pz','Pз')}${field('pd','Pд')}</div>${field('density','Плотность жидкости, кг/м³')}<div id="liveResult">${resultCard('Уровень жидкости','','Заполните все параметры')}</div><button class="btn secondary full" id="clear">Очистить</button></main>`);const calc=()=>{const d=num(depth.value),z=num(pz.value),p=num(pd.value),rho=num(density.value);if([d,z,p,rho].some(v=>v===null)||rho<=0)return setResult('Уровень жидкости','', 'Заполните все параметры');const level=d-((p-z)*10)/(rho/1000);setResult('Уровень жидкости',`${fmt(level)} м`);state.last={title:'Уровень жидкости',method:'Автоматический расчёт',result:`${fmt(level)} м`,details:`Глубина=${d} м; Pз=${z}; Pд=${p}; плотность=${rho} кг/м³`}};bind(['depth','pz','pd','density'],calc);clear.onclick=()=>{['depth','pz','pd','density'].forEach(i=>document.getElementById(i).value='');calc()};window.onbeforeunload=null}
+function launchFrequency(level,head){return 50*Math.sqrt((40*9.81+level)/head)}
+function renderLevel(){app.innerHTML=screen(`${topbar('Расчёт уровня жидкости')}<main class="content stack">${field('depth','Глубина спуска насоса, м')}<div class="row">${field('pz','Pз')}${field('pd','Pд')}</div>${field('density','Плотность жидкости, кг/м³')}${field('levelHead','Напор УЭЦН, м (необязательно)')}<div class="hint">Если указать напор УЭЦН, вместе с уровнем будет рассчитана необходимая частота запуска.</div><div id="liveResult">${resultCard('Уровень жидкости','','Заполните обязательные параметры')}</div><button class="btn secondary full" id="clear">Очистить</button></main>`);const calc=()=>{const d=num(depth.value),z=num(pz.value),p=num(pd.value),rho=num(density.value),h=num(levelHead.value);if([d,z,p,rho].some(v=>v===null)||rho<=0)return setResult('Уровень жидкости','', 'Заполните обязательные параметры');const level=d-((p-z)*10)/(rho/1000);let result=`${fmt(level)} м`,details=`Глубина=${d} м; Pз=${z}; Pд=${p}; плотность=${rho} кг/м³`;if(levelHead.value.trim()!==''){if(h===null||h<=0)return setResult('Уровень жидкости','','Напор УЭЦН должен быть больше нуля');const f=launchFrequency(level,h);if(!Number.isFinite(f))return setResult('Уровень жидкости','','Проверьте уровень и напор УЭЦН');result+=`\nЧастота запуска: ${fmt(f)} Гц`;details+=`; напор=${h} м; частота запуска=${fmt(f)} Гц`}setResult('Уровень жидкости и запуск',result);state.last={title:'Уровень жидкости',method:h===null?'Автоматический расчёт':'Уровень + частота запуска',result,details}};bind(['depth','pz','pd','density','levelHead'],calc);clear.onclick=()=>{['depth','pz','pd','density','levelHead'].forEach(i=>document.getElementById(i).value='');calc()};window.onbeforeunload=null}
 
-function renderFrequency(){app.innerHTML=screen(`${topbar('Необходимая частота запуска')}<main class="content stack">${field('level','Уровень жидкости, м')}${field('head','Напор, м')}<div id="liveResult">${resultCard('Необходимая частота','','Заполните все параметры')}</div></main>`);const calc=()=>{const l=num(level.value),h=num(head.value);if(l===null||h===null||h<=0)return setResult('Необходимая частота','','Заполните все параметры');const r=50*Math.sqrt((40*9.81+l)/h);if(!Number.isFinite(r))return setResult('Необходимая частота','','Проверьте значения');setResult('Необходимая частота',`${fmt(r)} Гц`);state.last={title:'Необходимая частота запуска',method:'Автоматический расчёт',result:`${fmt(r)} Гц`,details:`Уровень=${l} м; напор=${h} м`}};bind(['level','head'],calc)}
+function renderFrequency(){app.innerHTML=screen(`${topbar('Необходимая частота запуска')}<main class="content stack">${field('level','Уровень жидкости, м')}${field('head','Напор, м')}<div id="liveResult">${resultCard('Необходимая частота','','Заполните все параметры')}</div></main>`);const calc=()=>{const l=num(level.value),h=num(head.value);if(l===null||h===null||h<=0)return setResult('Необходимая частота','','Заполните все параметры');const r=launchFrequency(l,h);if(!Number.isFinite(r))return setResult('Необходимая частота','','Проверьте значения');setResult('Необходимая частота',`${fmt(r)} Гц`);state.last={title:'Необходимая частота запуска',method:'Автоматический расчёт',result:`${fmt(r)} Гц`,details:`Уровень=${l} м; напор=${h} м`}};bind(['level','head'],calc)}
+
+function renderForeignPump(){app.innerHTML=screen(`${topbar('Иностранные УЭЦН')}<main class="content stack"><div class="card stack"><b>Пересчёт производительности по частоте</b>${field('foreignRate','Производительность DN, барр./сут')}${field('foreignBaseFreq','Частота в обозначении, Гц','value="60"')}${field('foreignTargetFreq','Требуемая частота, Гц','value="50"')}</div><div id="liveResult">${resultCard('Производительность','','Введите значение DN')}</div><details class="card help-card"><summary>❓ Как пользоваться расчётом</summary><div class="hint"><p>В обозначениях иностранных УЭЦН число часто указывает номинальную подачу в баррелях в сутки при 60 Гц. Например, DN360 — 360 барр./сут при 60 Гц.</p><p>Введите число из обозначения, проверьте исходную частоту и задайте свою целевую частоту. По закону подобия подача пересчитывается пропорционально частоте: Q₂ = Q₁ × F₂ / F₁.</p><p>Пример: DN360 при 50 Гц ≈ 300 барр./сут, или 47,7 м³/сут. Это расчётная оценка; фактическую рабочую точку уточняйте по характеристике конкретного насоса.</p></div></details></main>`);const calc=()=>{const q=num(foreignRate.value),f1=num(foreignBaseFreq.value),f2=num(foreignTargetFreq.value);if([q,f1,f2].some(v=>v===null)||q<=0||f1<=0||f2<=0)return setResult('Производительность','','Введите положительные значения');const bpd=q*f2/f1,m3=bpd*0.158987294928;const result=`${fmt(bpd)} барр./сут\n${fmt(m3)} м³/сут`;setResult(`Производительность при ${fmt(f2)} Гц`,result);state.last={title:'Иностранный УЭЦН — производительность',method:'Пересчёт по закону подобия',result,details:`DN/подача=${q} барр./сут; исходная частота=${f1} Гц; расчётная частота=${f2} Гц`}};bind(['foreignRate','foreignBaseFreq','foreignTargetFreq'],calc);calc()}
 
 const vkpTable={'139.7-60':0.0091,'139.7-73':0.0100,'139.7-89':0.0058,'146-60':0.0100,'146-73':0.0087,'146-89':0.0067,'168-60':0.0150,'168-73':0.0136,'168-89':0.0114,'178-60':0.0168,'178-73':0.0155,'178-89':0.0134};
 const vnkt={'60':0.0020,'73':0.0030,'89':0.0045};
@@ -88,7 +111,7 @@ function renderTap(){app.innerHTML=screen(`${topbar('Расчёт отпайки
 function renderHistory(){const list=history();app.innerHTML=screen(`${topbar('История расчётов')}<main class="content stack">${list.length?`<button class="btn danger full" id="clearHistory">Очистить историю</button>${list.map(x=>`<div class="card history-item"><div class="title">${esc(x.title)}</div><div class="date">${new Date(x.ts).toLocaleString('ru-RU')}</div><div class="history-result">${esc(x.result)}</div><div class="subtle">${esc(x.method||'')}</div><div class="hint">${esc(x.details||'')}</div></div>`).join('')}`:'<div class="empty">История пока пустая.<br>Выполненные расчёты будут сохраняться на этом устройстве.</div>'}</main>`,'history');document.getElementById('clearHistory')?.addEventListener('click',()=>{if(confirm('Очистить всю историю?')){clearHistory();renderHistory()}})}
 
 
-function topbarTo(title,backRoute='reference'){return `<div class="topbar"><button class="back" onclick="goBack()">‹</button><h1>${esc(title)}</h1></div>`}
+function topbarTo(title,backRoute='reference'){return regulationTopbar(title)}
 const tubingGost633={
  '60':{outside:60.3,walls:[5.0]},
  '73':{outside:73.0,walls:[5.5,7.0]},
@@ -151,7 +174,7 @@ const referenceInfo = {
 };
 function openRefKey(key){const x=referenceInfo[key];if(!x)return;state.refInfo={title:x.title,text:x.text};go('refinfo')}
 
-function renderReference(){app.innerHTML=screen(`${topbar('Справочник')}<main class="content stack">
+function renderReference(){app.innerHTML=screen(`${regulationTopbar('Справочник')}<main class="content stack">
 ${refCard('⚙','Необходимый приток для охлаждения ПЭД','Расчёт притока при номинальной и фактической загрузке',"go('ped')")}
 ${refCard('⏱','Работа ПЭД при недостаточном притоке','Допустимое время работы и охлаждения',"openRefKey('pedLowFlow')")}
 ${refCard('🌡','Температурные группы ПЭД','Допустимая температура пластовой жидкости',"openRefKey('pedTemp')")}
@@ -236,15 +259,15 @@ function renderPrivacy(){app.innerHTML=screen(`${topbar('Политика кон
 
 function openHomeFromStart(){state.route='home';state.navStack=[];render();scrollTo(0,0)}
 function renderNotice(){app.innerHTML=`<div class="notice"><div class="panel card"><img src="assets/logo.png" style="width:130px;display:block;margin:0 auto 14px"><h1>Конфиденциальность</h1><p>Приложение работает локально и не передаёт введённые данные разработчику или третьим лицам.</p><p>Перед использованием вы можете ознакомиться с Политикой конфиденциальности.</p><div class="actions"><button class="btn secondary full" id="policyFirst">Открыть политику</button><button class="btn full" id="continueFirst">Продолжить</button></div></div></div>`;policyFirst.onclick=()=>{state.route='privacy';state.navStack=[];render();scrollTo(0,0)};continueFirst.onclick=()=>{localStorage.setItem('privacy_seen','1');openHomeFromStart()}}
-function renderSplash(){state.route='splash';app.innerHTML=`<div class="splash"><div class="center"><img src="assets/logo.png" alt="Оператор ДНГ"><div class="tag">Инженерные расчёты</div></div><div class="meta">Автор<strong>Муса Якупов</strong>Версия ${APP_VERSION}</div></div>`;setTimeout(()=>{if(localStorage.getItem('privacy_seen'))openHomeFromStart();else renderNotice()},1200)}
+function renderSplash(){state.route='splash';app.innerHTML=`<div class="splash"><div class="center"><img src="assets/logo.png" alt="Оператор ДНГ"><div class="tag">Инженерные расчёты</div></div><div class="meta">Автор<strong>Муса Якупов</strong>Версия ${APP_VERSION}</div></div>`;setTimeout(()=>{try{if(localStorage.getItem('privacy_seen'))openHomeFromStart();else renderNotice()}catch{openHomeFromStart()}},650)}
 
 function saveLastIfNeeded(){state._last=null}
-window.go=function(route){if(route===state.route)return;if(state.route)state.navStack.push(state.route);resetHistoryDraft();state.route=route;render();scrollTo(0,0)};window.goBack=goBack
-function render(){clearInterval(timerInterval);timerInterval=null;switch(state.route){case'home':return renderHome();case'level':return renderLevel();case'frequency':return renderFrequency();case'flow':return renderFlow();case'manual':return renderManual();case'upr':return renderOperating('upr');case'apv':return renderOperating('apv');case'sko':return renderSko();case'tap':return renderTap();case'history':return renderHistory();case'reference':return renderReference();case'refinfo':return renderRefInfo();case'ped':return renderPed();case'assistant':return renderAssistant();case'pipes':return renderPipes();case'skoref':return renderSkoReference();case'about':return renderAbout();case'privacy':return renderPrivacy();default:return renderHome()}}
+window.go=function(route){if(route===state.route)return;if(state.route)state.navStack.push(state.route);if(!isRegulationRoute(route))resetRegulationOrientation();resetHistoryDraft();state.route=route;render();scrollTo(0,0)};window.goBack=goBack;window.toggleRegulationOrientation=toggleRegulationOrientation
+function render(){clearInterval(timerInterval);timerInterval=null;switch(state.route){case'home':return renderHome();case'level':return renderLevel();case'frequency':return renderFrequency();case'foreignPump':return renderForeignPump();case'flow':return renderFlow();case'manual':return renderManual();case'upr':return renderOperating('upr');case'apv':return renderOperating('apv');case'sko':return renderSko();case'tap':return renderTap();case'history':return renderHistory();case'reference':return renderReference();case'refinfo':return renderRefInfo();case'ped':return renderPed();case'assistant':return renderAssistant();case'pipes':return renderPipes();case'skoref':return renderSkoReference();case'about':return renderAbout();case'privacy':return renderPrivacy();default:return renderHome()}}
 
 
 function setupPressFeedback(){
-  const selector='.btn,.menu-card,.nav-btn,.back,.radio-item,.chip,.assistant-topic,.ped-result,.nkt-option';
+  const selector='.btn,.menu-card,.nav-btn,.back,.rotate-btn,.radio-item,.chip,.assistant-topic,.ped-result,.nkt-option';
   document.addEventListener('pointerdown',e=>{
     const el=e.target.closest?.(selector);if(!el)return;
     el.classList.add('pressed');

@@ -6,7 +6,7 @@ button,input,select{font:inherit}
 #app{min-height:100dvh}
 .screen{min-height:100dvh;padding-bottom:calc(78px + var(--safe-bottom));background:var(--bg)}
 .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:8px;padding:calc(8px + var(--safe-top)) 10px 10px;background:var(--yellow2);box-shadow:0 1px 2px #0001}
-.topbar h1{font-size:20px;margin:0;font-weight:800;line-height:1.2}.back{width:42px;height:42px;border:0;border-radius:50%;background:transparent;font-size:28px;cursor:pointer}
+.topbar h1{font-size:20px;margin:0;font-weight:800;line-height:1.2;flex:1}.back,.rotate-btn{width:42px;height:42px;border:0;border-radius:50%;background:transparent;font-size:28px;cursor:pointer;flex:0 0 42px}.rotate-btn{font-size:25px}
 .hero{background:var(--yellow);padding:calc(14px + var(--safe-top)) 18px 16px;text-align:center}.hero img{display:block;width:min(44vw,176px);max-height:150px;object-fit:contain;margin:0 auto}.hero h1{font-size:23px;margin:10px 0 2px}.hero p{margin:0;color:#333}
 .content{padding:14px;max-width:680px;margin:0 auto}.stack{display:grid;gap:10px}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.card{background:var(--card);border-radius:16px;padding:15px;box-shadow:0 2px 8px #00000012}.menu-card{display:flex;align-items:center;gap:13px;cursor:pointer;min-height:76px}.menu-card .emoji{font-size:27px;width:34px;text-align:center}.menu-card .grow{flex:1}.menu-card h3{font-size:16px;margin:0 0 4px}.menu-card p{font-size:13px;margin:0;color:var(--muted);line-height:1.35}.chev{font-size:28px;color:var(--orange)}
 .field{display:grid;gap:5px}.field label{font-size:13px;color:#555;font-weight:600}.field input,.field select{width:100%;height:48px;border:1px solid #b8b8b8;border-radius:11px;background:#fff;padding:0 12px;outline:none}.field input:focus,.field select:focus{border:2px solid var(--orange)}
@@ -25,9 +25,9 @@ button,input,select{font:inherit}
 .ref-text{line-height:1.55;white-space:normal}.ref-text h3{margin:0 0 9px}.ref-text p{margin:0 0 12px}.pipe-card h3{margin:0 0 10px}.pipe-row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid #eee}.pipe-row:first-of-type{border-top:0}.assistant-topic{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}.assistant-topic span{font-size:26px;color:var(--orange)}.warning-card{background:#FFF3CD}.ped-result{cursor:pointer}.ped-flow{margin-top:8px}.error{color:var(--danger)}
 
 /* Touch feedback and compact custom icons */
-.btn,.menu-card,.nav-btn,.back,.radio-item,.chip,.assistant-topic,.ped-result,.nkt-option{transition:transform .08s ease,filter .08s ease,background-color .12s ease,border-color .12s ease}
-.btn:active,.menu-card:active,.nav-btn:active,.back:active,.radio-item:active,.chip:active,.assistant-topic:active,.ped-result:active,.nkt-option:active,
-.btn.pressed,.menu-card.pressed,.nav-btn.pressed,.back.pressed,.radio-item.pressed,.chip.pressed,.assistant-topic.pressed,.ped-result.pressed,.nkt-option.pressed{transform:scale(.975);filter:brightness(.96)}
+.btn,.menu-card,.nav-btn,.back,.rotate-btn,.radio-item,.chip,.assistant-topic,.ped-result,.nkt-option{transition:transform .08s ease,filter .08s ease,background-color .12s ease,border-color .12s ease}
+.btn:active,.menu-card:active,.nav-btn:active,.back:active,.rotate-btn:active,.radio-item:active,.chip:active,.assistant-topic:active,.ped-result:active,.nkt-option:active,
+.btn.pressed,.menu-card.pressed,.nav-btn.pressed,.back.pressed,.rotate-btn.pressed,.radio-item.pressed,.chip.pressed,.assistant-topic.pressed,.ped-result.pressed,.nkt-option.pressed{transform:scale(.975);filter:brightness(.96)}
 .menu-card .emoji{display:flex;align-items:center;justify-content:center;width:38px;height:38px;flex:0 0 38px}
 .menu-svg,.menu-img{width:36px;height:36px;display:block;object-fit:contain}
 .radio-item{align-items:center;min-height:52px;border:1px solid #ddd}
@@ -35,5 +35,12 @@ button,input,select{font:inherit}
 .nkt-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .nkt-option{height:48px;border:1px solid #bbb;border-radius:12px;background:#fff;color:var(--black);font-weight:800;cursor:pointer}
 .nkt-option.active{background:var(--yellow2);border:2px solid #b78300}
+.help-card summary{font-weight:800;cursor:pointer}.help-card .hint{margin-top:12px}.help-card p{margin:0 0 10px}
+
+/* iOS does not expose Screen Orientation lock for PWAs; this is the button-only fallback. */
+html.manual-landscape,html.manual-landscape body{width:100%;height:100%;overflow:hidden}
+html.manual-landscape #app{position:fixed;left:0;top:0;width:100vh;height:100vw;overflow:auto;transform-origin:top left;transform:translateX(100vw) rotate(90deg)}
+html.manual-landscape .screen{min-height:100vw;padding-bottom:calc(78px + var(--safe-bottom))}
+html.manual-landscape .bottom-nav{width:100vh;right:auto}
 
 .nav-btn:disabled{opacity:.32;pointer-events:none}.back-nav span:first-child{font-size:30px;line-height:20px}
